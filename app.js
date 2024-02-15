@@ -1,11 +1,12 @@
-// app.js
-
 require('dotenv').config();
 
 // Required modules
 const express = require('express');
 const nodemailer = require('nodemailer');
 const bodyParser = require('body-parser');
+const fs = require('fs');
+
+
 
 // Initialize Express app
 const app = express();
@@ -26,6 +27,12 @@ app.get('/', (req, res) => {
 app.post('/send-email', (req, res) => {
     const { to, subject, text } = req.body;
 
+
+    if (!to || !subject || !text) {
+        return res.status(400).json({ error: 'Invalid argument exception' });
+    }
+
+    console.log(req.body)
     const transporter = nodemailer.createTransport({
         service: 'Gmail',
         auth: {
@@ -34,12 +41,18 @@ app.post('/send-email', (req, res) => {
         }
     });
 
+      // Read the email template file
+  const emailTemplate = fs.readFileSync(__dirname + '/email-template.html', 'utf8');
+
+  // Inject dynamic content into the template
+  const html = emailTemplate.replace(/{{subject}}/g, subject).replace(/{{text}}/g, text);
+
     // Email message options
     const mailOptions = {
         from: process.env.SMTP_EMAIL,
         to: to,
         subject: subject,
-        text: text
+        html: html
     };
 
     // Send email
@@ -49,7 +62,7 @@ app.post('/send-email', (req, res) => {
             res.send('Error occurred, email not sent.');
         } else {
             console.log('Email sent: ' + info.response);
-            res.send('Email sent successfully.');
+            res.status(200).send('Email sent successfully.');
         }
     });
 });
